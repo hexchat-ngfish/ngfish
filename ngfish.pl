@@ -42,7 +42,7 @@ use constant {
 	CPREFIX => 'ngf',
 	
 	PLUGIN_NAME => 'ngFish',
-	PLUGIN_VERS => '1.0',
+	PLUGIN_VERS => '1.1',
 	PLUGIN_DESC => 'ngFish - Hexchat OTR encryption plugin using Twofish in CBC mode'
 
 };
@@ -50,7 +50,9 @@ use constant {
 # enter FiSHLiM compatibility mode automatically if FiSHLiM is detected, 0 to disable
 my $AUTOCOMPAT = 1; 
 # prefix to identify encrypted messages
-my $PREFIX = '+OK ';
+my $PREFIXDEFAULT = '+OK ';
+# prefix to identify encrypted messages in compatibility mode with FiSHLiM
+my $PREFIXCOMPAT = "+\x{041E}K ";
 
 do { 
 	die "ngFish won't work without $_ installed, please install this module first.\n" unless eval "require $_;1;" 
@@ -60,11 +62,12 @@ register(PLUGIN_NAME, PLUGIN_VERS, PLUGIN_DESC, sub {
 	prntf("%s plugin unloaded", PLUGIN_NAME);
 });
 
+my $PREFIX = $PREFIXDEFAULT;
 my $COMPAT = 0;
 if ( -f get_info("libdirfs") . '/fishlim.so' && $AUTOCOMPAT ) {
 	$COMPAT = 1;
 	# prefix to identify encrypted messages in FiSHLiM compatibility mode
-	$PREFIX = "+\x{041E}K ";
+	$PREFIX = $PREFIXCOMPAT;
 	prntf("FiSHLiM exists, loading %s in compatibility mode. All commands are available with /ng* prefix.", PLUGIN_NAME);
 }
 
@@ -137,7 +140,9 @@ my $handle_incoming = sub {
 		$message =~ s/\Q$actionchar\E$//;
 		$is_action = 1;
 	}
-	if ( substr($message, 0, length($PREFIX)) eq $PREFIX ) {
+	
+	my $iprefix = substr($message, 0, length($PREFIX));
+	if ( $iprefix eq $PREFIXCOMPAT or $iprefix eq $PREFIXDEFAULT ) {
 		
 		my $xmessage = substr($message, length($PREFIX));
 		$xmessage =~ s/\\/\n/g;
